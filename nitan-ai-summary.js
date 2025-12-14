@@ -3,7 +3,7 @@
 // @namespace    http://tampermonkey.net/
 // @version      37.1
 // @description  全界面中英双语支持，内置超全模型库，支持极速并发抓取
-// @author       You
+// @author       ALousaBao
 // @match        https://www.uscardforum.com/*
 // @connect      generativelanguage.googleapis.com
 // @connect      uscardforum.com
@@ -497,4 +497,5 @@
 
 
 })();
+
 
