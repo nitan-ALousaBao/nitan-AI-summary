@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         USCardForum AI 总结 (v38.0 状态文案精修版)
+// @name         USCardForum AI 总结
 // @namespace    http://tampermonkey.net/
-// @version      38.0
-// @description  修复状态提示文案，区分系统初始化与任务执行状态
+// @version      37.1
+// @description  全界面中英双语支持，内置超全模型库，支持极速并发抓取
 // @author       You
 // @match        https://www.uscardforum.com/*
 // @connect      generativelanguage.googleapis.com
@@ -11,6 +11,8 @@
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        GM_addStyle
+// @updateURL    https://raw.githubusercontent.com/nitan-ALousaBao/nitan-AI-summary/main/nitan-ai-summary.js
+// @downloadURL  https://raw.githubusercontent.com/nitan-ALousaBao/nitan-AI-summary/main/nitan-ai-summary.js
 // ==/UserScript==
 
 (function() {
@@ -495,3 +497,4 @@
 
 
 })();
+
