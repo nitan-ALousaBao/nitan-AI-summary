@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         USCardForum AI 总结
+// @name         USCardForum AI 总结 (v37.2 修复变量冲突版)
 // @namespace    http://tampermonkey.net/
-// @version      37.1
-// @description  全界面中英双语支持，内置超全模型库，支持极速并发抓取
+// @version      37.2
+// @description  修复搜索时 't is not a function' 错误，优化变量命名
 // @author       ALousaBao
 // @match        https://www.uscardforum.com/*
 // @connect      generativelanguage.googleapis.com
@@ -20,7 +20,7 @@
 
     // ✅ 你的 API Key
     const API_KEY = ;
-
+    
     // 🎨 样式
     GM_addStyle(`
         .ai-progress-container { width: 100%; height: 6px; background: #e9ecef; margin-top: 10px; border-radius: 3px; overflow: hidden; display: none; }
@@ -50,20 +50,19 @@
         'gemma-3-1b-it':         { type: 'small',  limit: 'mid' },
     };
 
-    const CONTAINER_ID = 'ai-btn-container-v38';
-    const BOX_ID = 'ai-result-box-v38';
-    const SETTINGS_ID = 'ai-settings-v38';
+    const CONTAINER_ID = 'ai-btn-container-v37';
+    const BOX_ID = 'ai-result-box-v37';
+    const SETTINGS_ID = 'ai-settings-v37';
 
     // 状态
-    let currentModel = GM_getValue('ai_model_selection', null);
-    let availableModels = [];
+    let currentModel = GM_getValue('ai_model_selection', null); 
+    let availableModels = []; 
     let currentLang = localStorage.getItem('ai_summary_lang') || 'zh';
     let currentMode = null;
 
-    // === 🌐 语言包定义 ===
+    // === 🌐 语言包 ===
     const I18N = {
         zh: {
-            // 按钮
             btn_search_ultra: "🤯 究极搜索 (并发快)",
             btn_search_deep: "🧠 深度搜索 (Top 50 标题)",
             btn_search_fast: "⚡ 屏幕总结",
@@ -72,35 +71,29 @@
             btn_topic_fast: "⚡ 快速总结",
             btn_settings: "⚙️ 模型设置",
             btn_close: "关闭",
-            // UI文本
             ui_title: "🤖 AI 总结报告",
             lang_zh: "🇨🇳 中文",
             lang_en: "🇺🇸 English",
-            model_loading: "🔄 系统初始化...",  // 修正1：系统加载状态
+            model_loading: "🔄 系统初始化...",
             model_label: "当前: ",
             settings_title: "⚙️ 选择 AI 模型",
             settings_desc: "列表由您的 API Key 实时获取。",
             settings_fetching: "⏳ 正在从 Google 获取列表...",
             settings_note: "注意：红色标签模型通常每日仅限 20 次。",
-            // 状态提示
-            status_start: "🚀 任务启动中...", // 修正2：点击按钮后的第一状态
-            status_fetching_meta: "⏳ 正在获取帖子元数据...",
+            status_analyzing: "🤖 数据抓取完毕，AI 正在分析...",
+            status_reading: "⏳ 正在读取: ",
             status_fetching_list: "⏳ 正在获取列表...",
-            status_reading: "📥 正在并发抓取: ",
-            status_analyzing: "🤖 抓取完成，AI 正在深度思考...",
-            // 错误
+            status_start: "🚀 任务启动中...",
             err_no_result: "❌ 没有搜索结果",
             err_too_long: "⚠️ 帖子过长 (>3000楼)，是否继续？",
             err_fail: "❌ 失败: ",
             err_net: "网络错误",
-            // Prompt 指令
             prompt_lang: "【重要】：请严格使用简体中文输出。",
             prompt_search_ultra: "你是一个专家。综合这10个帖子的内容生成终极指南：1.最佳方案 2.观点冲突 3.演变历史 4.雷区汇总。",
             prompt_topic_full: "这是帖子的【全部楼层】。请利用长窗口能力深度分析：1.时间线梳理 2.最终定论 3.DP汇总 4.风险警告。",
             prompt_screen: "请总结当前屏幕上的内容。",
             prompt_titles: "请根据这些标题生成趋势简报。",
             prompt_medium: "这是帖子的首尾内容，请总结：意图、现状、DP、风险。",
-            // 标签翻译
             tag_rec: "🟢 推荐", tag_stable: "🟢 稳定", tag_new: "🟢 最新", tag_fast: "🟢 极速",
             tag_smart: "🟡 聪明", tag_stable_y: "🟡 稳定",
             tag_low: "🔴 极低", tag_exp: "🔴 实验", tag_future: "🔴 预览", tag_img: "🔴 图像",
@@ -126,11 +119,10 @@
             settings_desc: "List fetched via your API Key.",
             settings_fetching: "⏳ Fetching list...",
             settings_note: "Note: Red tags often have a 20/day limit.",
-            status_start: "🚀 Starting...",
-            status_fetching_meta: "⏳ Fetching Metadata...",
+            status_analyzing: "🤖 Analyzing...",
+            status_reading: "⏳ Reading: ",
             status_fetching_list: "⏳ Fetching List...",
-            status_reading: "📥 Reading: ",
-            status_analyzing: "🤖 Data fetched. Analyzing...",
+            status_start: "🚀 Starting...",
             err_no_result: "❌ No results",
             err_too_long: "⚠️ Too long (>3000 posts). Continue?",
             err_fail: "❌ Failed: ",
@@ -168,7 +160,7 @@
     // === 2. 界面监控 ===
     setInterval(() => {
         const url = window.location.href;
-        const valid = (url.includes('/search') && document.querySelector('.fps-result')) ||
+        const valid = (url.includes('/search') && document.querySelector('.fps-result')) || 
                       (url.includes('/t/') && document.querySelector('.post-stream'));
         if (valid) {
             if (!document.getElementById(CONTAINER_ID)) createMainUI();
@@ -214,12 +206,12 @@
 
         const toolbar = document.createElement('div');
         toolbar.style.cssText = "display:flex; gap:5px;";
-
+        
         const langSel = document.createElement('select');
         langSel.style.cssText = "padding:4px;border-radius:8px;font-size:12px;border:1px solid #ccc;cursor:pointer;";
         langSel.innerHTML = `<option value="zh" ${currentLang==='zh'?'selected':''}>${I18N.zh.lang_zh}</option><option value="en" ${currentLang==='en'?'selected':''}>${I18N.en.lang_en}</option>`;
         langSel.onchange = (e) => { currentLang = e.target.value; localStorage.setItem('ai_summary_lang', currentLang); updateMainUI(); };
-
+        
         const settingsBtn = document.createElement('button');
         settingsBtn.innerHTML = t('btn_settings');
         settingsBtn.style.cssText = "padding:4px 8px;border-radius:8px;font-size:12px;cursor:pointer;border:1px solid #ccc;background:#f8f9fa;";
@@ -242,7 +234,6 @@
 
         const lbl = document.createElement('div');
         lbl.style.cssText = "font-size:10px; color:#666; background:rgba(255,255,255,0.8); padding:2px 5px; border-radius:4px;";
-        // 修正：这里不再硬编码 "Initializing..."，而是使用 "model_loading" (🔄 系统初始化...)
         lbl.innerText = currentModel ? `${t('model_label')} ${currentModel}` : t('model_loading');
         c.appendChild(lbl);
 
@@ -271,10 +262,10 @@
         box.id = SETTINGS_ID;
         box.style.cssText = `position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:450px;max-height:80vh;background:white;z-index:1000001;padding:20px;border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,0.5);border:1px solid #ccc;display:flex;flex-direction:column;`;
         box.innerHTML = `<h3>${t('settings_title')}</h3><p style="font-size:11px;color:#d63384;">${t('settings_note')}</p>`;
-
+        
         const list = document.createElement('div');
         list.style.cssText = "overflow-y:auto;flex-grow:1;margin:10px 0;border:1px solid #eee;border-radius:8px;";
-
+        
         if(availableModels.length === 0) {
             list.innerHTML = `<div style="padding:20px;text-align:center;">${t('settings_fetching')}</div>`;
             initModelList().then(() => { box.remove(); showSettings(); });
@@ -299,7 +290,7 @@
             });
         }
         box.appendChild(list);
-
+        
         const close = document.createElement('button');
         close.innerText = t('btn_close');
         close.style.cssText = "padding:8px;cursor:pointer;border:1px solid #ddd;background:#f8f9fa;border-radius:5px;";
@@ -332,12 +323,12 @@
     // ============================================================
     // 🚀 业务逻辑
     // ============================================================
-
+    
     async function fetchBatchedParallel(topicId, postIds) {
         const BATCH_SIZE = 50;
         const chunks = [];
         for(let i=0; i<postIds.length; i+=BATCH_SIZE) chunks.push(postIds.slice(i,i+BATCH_SIZE));
-
+        
         const total = chunks.length;
         let completed = 0;
         updateProgressBar(0);
@@ -359,14 +350,10 @@
     }
 
     async function handleTopicFull() {
-        // 修正：使用 status_start，不使用 model_loading
         showResult(t('status_start'), true);
-
-        updateProgressBoxText(t('status_fetching_meta'));
         const meta = await fetchJson(window.location.href.split('?')[0] + ".json");
         const total = meta.post_stream.stream.length;
         if(total > 3000 && !confirm(t('err_too_long'))) return;
-
         showProgressUI();
         const content = await fetchBatchedParallel(meta.id, meta.post_stream.stream);
         callAI(`${t('prompt_topic_full')}\nData:\n${content}`, "Full Topic");
@@ -381,15 +368,15 @@
             showProgressUI();
             let combined = `Query: ${q}\n\n`;
             for (let i = 0; i < topics.length; i++) {
-                const t = topics[i];
-                updateProgressBoxText(`${t('status_reading')} [${i+1}/10] ${t.title}`);
+                const topicObj = topics[i]; // ⚠️ 修复变量命名冲突 (原代码为 t)
+                updateProgressBoxText(`${t('status_reading')} [${i+1}/10] ${topicObj.title}`);
                 updateProgressBar(((i)/10)*100);
                 try {
-                    const meta = await fetchJson(`https://www.uscardforum.com/t/${t.id}.json`);
+                    const meta = await fetchJson(`https://www.uscardforum.com/t/${topicObj.id}.json`);
                     const ids = meta.post_stream.stream;
                     const target = ids.length <= 80 ? ids : [...new Set([...ids.slice(0, 40), ...ids.slice(ids.length - 40, ids.length)])];
-                    const content = await fetchBatchedParallel(t.id, target);
-                    combined += `\n=== Thread ${i+1}: ${t.title} ===\n${content}\n`;
+                    const content = await fetchBatchedParallel(topicObj.id, target);
+                    combined += `\n=== Thread ${i+1}: ${topicObj.title} ===\n${content}\n`;
                 } catch (e) {}
             }
             updateProgressBar(100);
@@ -397,6 +384,7 @@
         } catch (e) { showResult(t('err_fail') + e.message); }
     }
 
+    // 轻量功能
     async function handleTopicMedium() {
         showResult(t('status_start'), true);
         const meta = await fetchJson(window.location.href.split('?')[0] + ".json");
@@ -411,17 +399,17 @@
         let txt = ""; posts.forEach((p,i) => { if(i<40) txt += `[${p.querySelector('.username')?.innerText}]: ${p.querySelector('.cooked')?.innerText.substring(0,200)}\n` });
         callAI(`${t('prompt_screen')}\nData:\n${txt}`, "Screen");
     }
-    function handleSearchFast() {
+    function handleSearchFast() { 
         const list = document.querySelectorAll('.fps-result');
         let txt = ""; list.forEach((l,i) => { if(i<20) txt += `${i+1}. ${l.innerText.replace(/\n/g,' ')}\n` });
         callAI(`${t('prompt_screen')}\nData:\n${txt}`, "Screen");
     }
     async function handleSearchDeep() {
-        showResult(t('status_start'), true);
+        showResult(t('status_fetching_list'), true);
         const q = new URLSearchParams(window.location.search).get('q');
         const data = await fetchJson(`https://www.uscardforum.com/search/query.json?term=${encodeURIComponent(q)}`);
         let txt = `Query: ${q}\n\n`;
-        data.topics.slice(0,50).forEach((t,i) => txt += `${i+1}. [${t.title}] (Replies:${t.posts_count})\n`);
+        data.topics.slice(0,50).forEach((topic,i) => txt += `${i+1}. [${topic.title}] (Replies:${topic.posts_count})\n`);
         callAI(`${t('prompt_titles')}\nData:\n${txt}`, "Deep Search");
     }
 
@@ -429,7 +417,7 @@
     async function fetchJson(url) { return new Promise((res, rej) => GM_xmlhttpRequest({ method: "GET", url, onload: r => r.status==200?res(JSON.parse(r.responseText)):rej(new Error(r.status)), onerror: rej })); }
 
     function callAI(content, type) {
-        if(!currentModel) { alert("Model Init Failed"); return; }
+        if(!currentModel) { alert(t('status_init_fail')); return; }
         updateProgressBoxText(t('status_analyzing'));
         const langInfo = t('prompt_lang');
         GM_xmlhttpRequest({
@@ -477,10 +465,10 @@
             box.appendChild(content);
             document.body.appendChild(box);
         }
-
+        
         box.querySelector('b').innerText = t('ui_title');
         box.style.display = 'flex';
-
+        
         const progBox = document.getElementById(BOX_ID + '_prog');
         if(!loading && progBox) progBox.style.display = 'none';
         const c = document.getElementById(BOX_ID + '_content');
@@ -495,7 +483,4 @@
     function updateProgressBar(percent) { const bar = document.querySelector('.ai-progress-bar'); if(bar) bar.style.width = `${percent}%`; }
     function updateProgressBoxText(txt) { const tDiv = document.getElementById(BOX_ID + '_prog_text'); if(tDiv) tDiv.innerText = txt; }
 
-
 })();
-
-
