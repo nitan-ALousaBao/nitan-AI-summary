@@ -17,7 +17,7 @@
     'use strict';
 
     // ✅ 你的 API Key
-    const API_KEY = 'AIzaSyCeA3Y4fHpMAR5mX8Yl_uWewrSqFMLm-N0';
+    const API_KEY = ;
 
     // 🎨 样式
     GM_addStyle(`
@@ -492,5 +492,6 @@
     }
     function updateProgressBar(percent) { const bar = document.querySelector('.ai-progress-bar'); if(bar) bar.style.width = `${percent}%`; }
     function updateProgressBoxText(txt) { const tDiv = document.getElementById(BOX_ID + '_prog_text'); if(tDiv) tDiv.innerText = txt; }
+
 
 })();
